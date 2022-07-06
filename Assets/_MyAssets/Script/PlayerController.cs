@@ -11,6 +11,8 @@ public class PlayerController : MonoBehaviour
     float deltaMouseX;
     float speedX;
     [SerializeField] float speedZ;
+    [SerializeField] Renderer playerRenderer;
+
     readonly float pixelToUnitAdjustment = 0.8f; // px/frameをunit/frameに変換する補正用の定数
     float ResolutionAdjustment => (float)Screen.width / 750f; // iPhone678SE2を基準に開発している場合
     readonly float speedXInterpolate = 0.7f; // スピードを滑らかに変化させる
@@ -26,26 +28,33 @@ public class PlayerController : MonoBehaviour
 
     public PlayerState currentPlayerState { get; set; }
 
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Block"))
+        {
+            var currentMaterial = other.GetComponent<Renderer>().material;
+            Debug.Log(currentMaterial);
+            playerRenderer.material = currentMaterial;
+        }
+    }
+
     void Start()
     {
         currentPlayerState = PlayerState.Start;
     }
     void Update()
     {
-        Debug.Log(currentPlayerState);
+
         if (currentPlayerState == PlayerState.Start && Input.GetMouseButtonDown(0))
         {
             currentPlayerState = PlayerState.Run;
         }
         if (currentPlayerState == PlayerState.Start) return;
-        
+
         if (Input.GetMouseButtonDown(0))
         {
             preMouseX = Input.mousePosition.x;
         }
-
-
-
 
         if (currentPlayerState == PlayerState.Run)
         {
