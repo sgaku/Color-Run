@@ -6,10 +6,33 @@ public class PlayerController : MonoBehaviour
 {
 
     [SerializeField] Rigidbody rigidBody;
+    [SerializeField] CapsuleCollider capsuleCollider;
     [SerializeField] Animator animator;
+    //ブロックの親オブジェクトの位置情報
+    [SerializeField] Transform blockParent;
+    public Transform BlockParent
+    {
+        get { return blockParent; }
+        private set { blockParent = value; }
+    }
+    //デバッグ用にシリアライズを設定
+    [SerializeField] List<Transform> block = new List<Transform>();
+    public List<Transform> Block
+    {
+        get { return block; }
+        private set { block = value; }
+    }
+
     float preMouseX;
     float deltaMouseX;
     float speedX;
+    //プレイヤーの現在のY軸のポジション
+    float currentYPosition;
+    //プレイヤーの初期のY軸のポジション
+    float initialPositionY;
+    float colliderHeight = 3f;
+    float colliderCenter = 1.5f;
+    //移動スピード
     [SerializeField] float speedZ;
     [SerializeField] Renderer playerRenderer;
 
@@ -27,33 +50,43 @@ public class PlayerController : MonoBehaviour
     }
 
     public PlayerState currentPlayerState { get; set; }
-
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Block"))
         {
-            var currentMaterial = other.GetComponent<Renderer>().material;
-            Debug.Log(currentMaterial);
+            other.tag = "Collected";
+            var currentMaterial = other.gameObject.GetComponent<Renderer>().material;
             playerRenderer.material = currentMaterial;
+            block.Add(other.transform);
+            other.transform.parent = blockParent;
         }
     }
+
 
     void Start()
     {
         currentPlayerState = PlayerState.Start;
+        initialPositionY = transform.position.y;
     }
     void Update()
     {
-
         if (currentPlayerState == PlayerState.Start && Input.GetMouseButtonDown(0))
         {
             currentPlayerState = PlayerState.Run;
         }
         if (currentPlayerState == PlayerState.Start) return;
 
-        if (Input.GetMouseButtonDown(0))
+        if (block.Count > 0) currentPlayerState = PlayerState.Ride;
+        if (currentPlayerState == PlayerState.Ride)
         {
-            preMouseX = Input.mousePosition.x;
+            animator.SetBool("Idle", true);
+            animator.SetBool("Run", false);
+
+            currentYPosition = (block.Count) * 0.4f + initialPositionY;
+            transform.position = new Vector3(transform.position.x, currentYPosition, transform.position.z);
+            capsuleCollider.height = colliderHeight + Block.Count;
+            capsuleCollider.center = new Vector3(capsuleCollider.center.x, colliderCenter - (transform.localScale.y * Block.Count), capsuleCollider.center.z);
+            Move();
         }
 
         if (currentPlayerState == PlayerState.Run)
@@ -63,6 +96,10 @@ public class PlayerController : MonoBehaviour
             Move();
         }
 
+        if (Input.GetMouseButtonDown(0))
+        {
+            preMouseX = Input.mousePosition.x;
+        }
         if (Input.GetMouseButton(0))
         {
             // どの解像度でも感度が一定になるように
@@ -81,8 +118,9 @@ public class PlayerController : MonoBehaviour
         var targetSpeedX = deltaMouseX * pixelToUnitAdjustment * frameRateAdjustment;
         // 滑らかに速度変化するようにLerpを使う
         speedX = Mathf.Lerp(speedX, targetSpeedX, speedXInterpolate / frameRateAdjustment);
-
     }
+
+
 
     void Move()
     {
