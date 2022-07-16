@@ -32,9 +32,15 @@ public class PlayerController : MonoBehaviour
     float initialPositionY;
     float colliderHeight = 3f;
     float colliderCenter = 1.5f;
+    Material currentMaterial;
     //移動スピード
     [SerializeField] float speedZ;
     [SerializeField] Renderer playerRenderer;
+    public Renderer PlayerRenderer
+    {
+        get { return playerRenderer; }
+        private set { playerRenderer = value; }
+    }
 
     readonly float pixelToUnitAdjustment = 0.8f; // px/frameをunit/frameに変換する補正用の定数
     float ResolutionAdjustment => (float)Screen.width / 750f; // iPhone678SE2を基準に開発している場合
@@ -52,16 +58,36 @@ public class PlayerController : MonoBehaviour
     public PlayerState currentPlayerState { get; set; }
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Block"))
-        {
-            other.tag = "Collected";
-            var currentMaterial = other.gameObject.GetComponent<Renderer>().material;
-            playerRenderer.material = currentMaterial;
-            block.Add(other.transform);
-            other.transform.parent = blockParent;
-        }
+        if (other.CompareTag("Block")) CheckBlock(other.transform);
     }
+    void CheckBlock(Transform trans)
+    {
+        currentMaterial = trans.GetComponent<Renderer>().material;
 
+        if (block.Count == 0)
+        {
+            // Debug.Log("1");
+            trans.tag = "Collected";
+            playerRenderer.material = currentMaterial;
+            block.Add(trans);
+            trans.parent = blockParent;
+        }
+        else if (block.Count > 0 && playerRenderer.material.color == currentMaterial.color)
+        {
+            // Debug.Log("2");
+            trans.tag = "Collected";
+            block.Add(trans);
+            trans.parent = blockParent;
+        }
+        else if (block.Count > 0 && playerRenderer.material.color != currentMaterial.color)
+        {
+            // Debug.Log(playerRenderer.material);
+            // Debug.Log(currentMaterial);
+            // Debug.Log("3");
+            block.RemoveAt(block.Count - 1);
+        }
+
+    }
 
     void Start()
     {
@@ -70,29 +96,34 @@ public class PlayerController : MonoBehaviour
     }
     void Update()
     {
+        Debug.Log(currentPlayerState);
         if (currentPlayerState == PlayerState.Start && Input.GetMouseButtonDown(0))
         {
             currentPlayerState = PlayerState.Run;
         }
         if (currentPlayerState == PlayerState.Start) return;
 
+
         if (block.Count > 0) currentPlayerState = PlayerState.Ride;
+        else if (block.Count == 0) currentPlayerState = PlayerState.Run;
+
+        currentYPosition = (block.Count) * 0.4f + initialPositionY;
+        transform.position = new Vector3(transform.position.x, currentYPosition, transform.position.z);
+        capsuleCollider.height = colliderHeight + Block.Count;
+        capsuleCollider.center = new Vector3(capsuleCollider.center.x, colliderCenter - (transform.localScale.y * Block.Count), capsuleCollider.center.z);
+
+
+        if (currentPlayerState == PlayerState.Run)
+        {
+
+            animator.SetBool("Idle", false);
+            animator.SetBool("Run", true);
+            Move();
+        }
         if (currentPlayerState == PlayerState.Ride)
         {
             animator.SetBool("Idle", true);
             animator.SetBool("Run", false);
-
-            currentYPosition = (block.Count) * 0.4f + initialPositionY;
-            transform.position = new Vector3(transform.position.x, currentYPosition, transform.position.z);
-            capsuleCollider.height = colliderHeight + Block.Count;
-            capsuleCollider.center = new Vector3(capsuleCollider.center.x, colliderCenter - (transform.localScale.y * Block.Count), capsuleCollider.center.z);
-            Move();
-        }
-
-        if (currentPlayerState == PlayerState.Run)
-        {
-            animator.SetBool("Idle", false);
-            animator.SetBool("Run", true);
             Move();
         }
 
