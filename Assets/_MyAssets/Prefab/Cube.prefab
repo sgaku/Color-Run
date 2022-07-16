@@ -109,3 +109,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   boxCollider: {fileID: 4646826152543264042}
+  blockMaterial: {fileID: 4646826152543264043}
