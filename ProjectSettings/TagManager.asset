@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Block
   - Collected
+  - FinishCheck
   layers:
   - Default
   - TransparentFX
