@@ -9,14 +9,16 @@ public class BlockController : MonoBehaviour
 
     [SerializeField] Renderer blockMaterial;
     float initialBlockPositionY = -0.43f;
+    float index;
 
-    enum BlockState
+    public enum BlockState
     {
         Idle,
         Collected,
+        Checked,
         Removed,
     }
-    BlockState currentBlockState;
+    public BlockState currentBlockState { get; set; }
 
     void OnTriggerEnter(Collider other)
     {
@@ -43,6 +45,12 @@ public class BlockController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //プレイヤーがチェックポジションに入ったら強制的にチェック状態にする
+        if (currentBlockState == BlockState.Checked)
+        {
+            transform.parent = null;
+            return;
+        }
         if (currentBlockState == BlockState.Removed)
         {
             transform.parent = null;
@@ -53,17 +61,17 @@ public class BlockController : MonoBehaviour
         {
             CollectedMove();
         }
+
     }
 
     void CollectedMove()
     {
-        var index = Locator.i.playerController.Block.IndexOf(transform);
+        index = Locator.i.playerController.Block.IndexOf(transform);
         if (index == -1) currentBlockState = BlockState.Removed;
         else
         {
             transform.localScale = new Vector3(1, 1, 1);
             transform.localPosition = new Vector3(0, ((index + 1) - Locator.i.playerController.Block.Count) + initialBlockPositionY, 0);
         }
-
     }
 }

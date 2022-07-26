@@ -52,21 +52,53 @@ public class PlayerController : MonoBehaviour
         Start,
         Run,
         Ride,
+        Check,
         Goal,
+        Fail,
     }
 
     public PlayerState currentPlayerState { get; set; }
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Block")) CheckBlock(other.transform);
+        else if (other.CompareTag("FinishCheck"))
+        {
+            if (block.Count <= 0)
+            {
+                currentPlayerState = PlayerState.Fail;
+                return;
+            }
+            currentPlayerState = PlayerState.Check;
+            BlockController blockController = block[0].GetComponent<BlockController>();
+            blockController.currentBlockState = BlockController.BlockState.Checked;
+            block.RemoveAt(0);
+
+            // block.RemoveAt(block.Count - 1);
+        }
+        else if (other.CompareTag("Finish"))
+        {
+            if (block.Count <= 0)
+            {
+                currentPlayerState = PlayerState.Fail;
+                return;
+            }
+            BlockController blockController = block[0].GetComponent<BlockController>();
+            blockController.currentBlockState = BlockController.BlockState.Checked;
+            block.RemoveAt(0);
+            currentPlayerState = PlayerState.Goal;
+        }
     }
+
+    // void OnCollisionEnter(Collision collisionInfo)
+    // {
+
+    // }
     void CheckBlock(Transform trans)
     {
         currentMaterial = trans.GetComponent<Renderer>().material;
 
         if (block.Count == 0)
         {
-            // Debug.Log("1");
             trans.tag = "Collected";
             playerRenderer.material = currentMaterial;
             block.Add(trans);
@@ -74,16 +106,12 @@ public class PlayerController : MonoBehaviour
         }
         else if (block.Count > 0 && playerRenderer.material.color == currentMaterial.color)
         {
-            // Debug.Log("2");
             trans.tag = "Collected";
             block.Add(trans);
             trans.parent = blockParent;
         }
         else if (block.Count > 0 && playerRenderer.material.color != currentMaterial.color)
         {
-            // Debug.Log(playerRenderer.material);
-            // Debug.Log(currentMaterial);
-            // Debug.Log("3");
             block.RemoveAt(block.Count - 1);
         }
 
@@ -96,36 +124,46 @@ public class PlayerController : MonoBehaviour
     }
     void Update()
     {
-        Debug.Log(currentPlayerState);
-        if (currentPlayerState == PlayerState.Start && Input.GetMouseButtonDown(0))
-        {
-            currentPlayerState = PlayerState.Run;
-        }
+        // Debug.Log(currentPlayerState);
+        if (currentPlayerState == PlayerState.Start && Input.GetMouseButtonDown(0)) currentPlayerState = PlayerState.Run;
         if (currentPlayerState == PlayerState.Start) return;
 
+        //プレイヤーのコライダーの長さ調節
+        capsuleCollider.height = colliderHeight + blockParent.childCount;
+        capsuleCollider.center = new Vector3(capsuleCollider.center.x, colliderCenter - (transform.localScale.y * blockParent.childCount), capsuleCollider.center.z);
 
-        if (block.Count > 0) currentPlayerState = PlayerState.Ride;
+        switch (currentPlayerState)
+        {
+            case PlayerState.Run:
+                animator.SetBool("Idle", false);
+                animator.SetBool("Run", true);
+                Move();
+                break;
+            case PlayerState.Ride:
+                animator.SetBool("Idle", true);
+                animator.SetBool("Run", false);
+                Move();
+                break;
+            case PlayerState.Check:
+                animator.SetBool("Idle", true);
+                animator.SetBool("Run", false);
+                Move();
+                break;
+            case PlayerState.Fail:
+                rigidBody.velocity = Vector3.zero;
+                break;
+            case PlayerState.Goal:
+                Move();
+                break;
+
+        }
+        if (currentPlayerState == PlayerState.Check || currentPlayerState == PlayerState.Goal || currentPlayerState == PlayerState.Fail) return;
+
+        if (currentPlayerState == PlayerState.Run && block.Count > 0) currentPlayerState = PlayerState.Ride;
         else if (block.Count == 0) currentPlayerState = PlayerState.Run;
 
         currentYPosition = (block.Count) * 0.4f + initialPositionY;
         transform.position = new Vector3(transform.position.x, currentYPosition, transform.position.z);
-        capsuleCollider.height = colliderHeight + Block.Count;
-        capsuleCollider.center = new Vector3(capsuleCollider.center.x, colliderCenter - (transform.localScale.y * Block.Count), capsuleCollider.center.z);
-
-
-        if (currentPlayerState == PlayerState.Run)
-        {
-
-            animator.SetBool("Idle", false);
-            animator.SetBool("Run", true);
-            Move();
-        }
-        if (currentPlayerState == PlayerState.Ride)
-        {
-            animator.SetBool("Idle", true);
-            animator.SetBool("Run", false);
-            Move();
-        }
 
         if (Input.GetMouseButtonDown(0))
         {
@@ -150,8 +188,6 @@ public class PlayerController : MonoBehaviour
         // 滑らかに速度変化するようにLerpを使う
         speedX = Mathf.Lerp(speedX, targetSpeedX, speedXInterpolate / frameRateAdjustment);
     }
-
-
 
     void Move()
     {
