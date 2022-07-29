@@ -72,27 +72,14 @@ public class PlayerController : MonoBehaviour
             BlockController blockController = block[0].GetComponent<BlockController>();
             blockController.currentBlockState = BlockController.BlockState.Checked;
             block.RemoveAt(0);
-
-            // block.RemoveAt(block.Count - 1);
         }
         else if (other.CompareTag("Finish"))
         {
-            if (block.Count <= 0)
-            {
-                currentPlayerState = PlayerState.Fail;
-                return;
-            }
-            BlockController blockController = block[0].GetComponent<BlockController>();
-            blockController.currentBlockState = BlockController.BlockState.Checked;
-            block.RemoveAt(0);
             currentPlayerState = PlayerState.Goal;
         }
     }
 
-    // void OnCollisionEnter(Collision collisionInfo)
-    // {
 
-    // }
     void CheckBlock(Transform trans)
     {
         currentMaterial = trans.GetComponent<Renderer>().material;
@@ -153,7 +140,7 @@ public class PlayerController : MonoBehaviour
                 rigidBody.velocity = Vector3.zero;
                 break;
             case PlayerState.Goal:
-                Move();
+                rigidBody.velocity = Vector3.zero;
                 break;
 
         }
